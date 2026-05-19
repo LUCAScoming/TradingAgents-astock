@@ -11,8 +11,14 @@ from fpdf import FPDF
 
 
 _FONT_CANDIDATES = [
+    # Windows
+    "C:/Windows/Fonts/simhei.ttf",   # 黑体 (TTF, 兼容性最好)
+    "C:/Windows/Fonts/msyh.ttc",     # 微软雅黑
+    "C:/Windows/Fonts/simsun.ttc",   # 宋体
+    # macOS
     "/System/Library/Fonts/PingFang.ttc",
     "/System/Library/Fonts/STHeiti Light.ttc",
+    # Linux
     "/usr/share/fonts/truetype/noto/NotoSansSC-Regular.ttf",
     "/usr/share/fonts/noto-cjk/NotoSansCJKsc-Regular.otf",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -72,6 +78,11 @@ class _ReportPDF(FPDF):
             self.add_font("CJK", "", font_path, uni=True)
             self.add_font("CJK", "B", font_path, uni=True)
             self._has_cjk = True
+
+    @property
+    def _text_width(self) -> float:
+        """Effective text area width (mm), accounting for margins."""
+        return self.w - self.l_margin - self.r_margin
 
     def _use_font(self, style: str = "", size: int = 10) -> None:
         if self._has_cjk:
@@ -143,6 +154,7 @@ class _ReportPDF(FPDF):
 
     def _render_markdown(self, text: str) -> None:
         """Render markdown-formatted text with basic styling."""
+        self.set_x(self.l_margin)
         lines = text.split("\n")
         i = 0
         while i < len(lines):
@@ -199,7 +211,7 @@ class _ReportPDF(FPDF):
                     bullet = f"  {m.group(1)} "
                     body = m.group(2)
                 body = _strip_md_inline(body)
-                self.multi_cell(0, 5.5, bullet + body)
+                self.multi_cell(self._text_width,5.5, bullet + body)
                 i += 1
                 continue
 
@@ -213,7 +225,7 @@ class _ReportPDF(FPDF):
                 self.set_text_color(60, 60, 60)
                 cells = [c.strip() for c in stripped.strip("|").split("|")]
                 row_text = "    ".join(_strip_md_inline(c) for c in cells)
-                self.multi_cell(0, 5, row_text)
+                self.multi_cell(self._text_width,5, row_text)
                 i += 1
                 continue
 
@@ -231,7 +243,7 @@ class _ReportPDF(FPDF):
                 self.set_text_color(40, 40, 40)
                 para = " ".join(para_lines)
                 para = _strip_md_inline(para)
-                self.multi_cell(0, 5.5, para)
+                self.multi_cell(self._text_width,5.5, para)
                 self.ln(2)
                 continue
 
